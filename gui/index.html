@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lorem Ipsum Studio</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <h1>Lorem Ipsum<br /><span>Studio</span></h1>
+
+        <form id="options-form">
+          <label class="field">
+            <span class="label">Theme</span>
+            <select id="theme"></select>
+            <small id="theme-description"></small>
+          </label>
+
+          <label class="field">
+            <span class="label">Paragraphs <output id="paragraphs-out">3</output></span>
+            <input type="range" id="paragraphs" min="1" max="12" value="3" />
+          </label>
+
+          <div class="field-pair">
+            <label class="field">
+              <span class="label">Sentences min</span>
+              <input type="number" id="min-sentences" min="1" max="20" value="3" />
+            </label>
+            <label class="field">
+              <span class="label">max</span>
+              <input type="number" id="max-sentences" min="1" max="20" value="6" />
+            </label>
+          </div>
+
+          <div class="field-pair">
+            <label class="field">
+              <span class="label">Words min</span>
+              <input type="number" id="min-words" min="3" max="40" value="8" />
+            </label>
+            <label class="field">
+              <span class="label">max</span>
+              <input type="number" id="max-words" min="3" max="40" value="16" />
+            </label>
+          </div>
+
+          <label class="field">
+            <span class="label">Seed <em>(blank = random)</em></span>
+            <input type="text" id="seed" inputmode="numeric" placeholder="random" />
+          </label>
+
+          <label class="field checkbox">
+            <input type="checkbox" id="start-with-lorem" checked />
+            <span>Start with “Lorem ipsum…”</span>
+          </label>
+
+          <button type="submit" id="generate">Generate</button>
+        </form>
+      </aside>
+
+      <main id="content">
+        <header id="toolbar">
+          <div id="stats"></div>
+          <button id="copy" disabled>Copy text</button>
+        </header>
+        <article id="output"></article>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

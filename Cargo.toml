@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/lorem-core",
+    "crates/lorem-cli",
+    "crates/lorem-tui",
+    "gui/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.9"
+lorem-core = { path = "crates/lorem-core" }
+
+[profile.release]
+strip = true
+lto = true

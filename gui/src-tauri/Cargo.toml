@@ -1,0 +1,17 @@
+[package]
+name = "lorem-gui"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "lorem-gui"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+lorem-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = [] }

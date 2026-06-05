@@ -62,9 +62,10 @@ cross-cutting tests go in the crate's `tests/` dir.
 ### Front ends
 
 - `crates/lorem-cli` — `args.rs` (clap surface), `resolve.rs` (flag → saved
-  default → built-in precedence), `stream.rs` (`--infinite` paced streaming:
-  txt = prose to stdout with seed on stderr; json = JSON Lines with a meta
-  line carrying the seed — the seed-reporting invariant applies to streams).
+  default → built-in precedence), `stream.rs` (`--infinite` paced streaming;
+  `--output-format txt` = prose to stdout with seed on stderr, `json` =
+  JSON Lines with a meta line carrying the seed — the seed-reporting
+  invariant applies to streams).
   Broken pipes end streams quietly; don't use `println!` there (it panics
   on EPIPE). `main.rs` is dispatch only.
 - `crates/lorem-tui` — `app.rs` (state + key handling, fully unit-tested
@@ -114,6 +115,9 @@ cross-cutting tests go in the crate's `tests/` dir.
    `description`, `corpus`, `from_str`.
 
 All three front ends discover themes through `list_themes()` / `Theme::ALL`.
+The GUI's mock backend (`gui/src/backend/mock.ts`) keeps its own small theme
+list for browser-only mode — add the theme there too if it should appear in
+e2e/dev-in-browser.
 
 ## Gotchas
 

@@ -7,7 +7,7 @@ front ends (CLI, ratatui TUI, Tauri 2 + TypeScript GUI).
 
 ```sh
 cargo build --workspace            # everything (lorem-gui pulls ~400 deps first time)
-cargo test -p lorem-core           # all unit tests live in the core crate
+cargo test --workspace             # unit tests per module + core integration tests
 cargo run -p lorem-cli -- --help   # CLI (binary name: lorem)
 cargo run -p lorem-tui             # TUI (interactive — don't run headless)
 cd gui && npm run tauri dev        # GUI dev (needs npm install once)
@@ -21,39 +21,53 @@ All front ends call `lorem_core::generate(&GeneratorOptions) -> GeneratedText`
 and `lorem_core::list_themes()`. Front ends contain no generation logic — put
 behavior changes in `lorem-core` so all three pick them up.
 
-- `crates/lorem-core/src/markov.rs` — order-2 word-level Markov chain. Words
-  are interned to `u32` ids. Sentences walk the chain past the target length
-  until they hit a word in `enders` (words that ended a corpus sentence), so
-  they don't stop mid-phrase. Dead-end splices and ender-words become commas.
-- `crates/lorem-core/src/themes.rs` — `Theme` enum; corpora are plain-text
-  files under `src/themes/` pulled in with `include_str!`.
-- `crates/lorem-core/src/settings.rs` — persisted defaults
-  (`load_settings`/`save_settings`, JSON in the platform config dir). All
-  front ends load these at startup as their initial options; saving is via
-  CLI `--save-defaults` or TUI `s` (the GUI deliberately has no save
-  control). Seeds are never persisted (a saved seed would freeze the
-  output).
-- `crates/lorem-core/src/lib.rs` — options/output types (serde), `generate`,
-  and `Mode` (words / sentences / paragraphs). `GeneratorOptions.count` is in
-  units of `mode`; `GeneratedText.items` holds one entry per paragraph or
-  sentence (a single entry in words mode, which is a flat lowercase run with
-  no punctuation). `Generator` is the incremental form (one word/sentence/
-  paragraph per `next_item` call) — `generate` is built on it, so batch and
-  streamed output are identical for the same seed. Words mode is one
-  continuous walk; dead ends queue the second word of the spliced start pair
-  so the walk stays on real corpus transitions.
-- `crates/lorem-cli` — clap; JSON output (pretty by default, `--compact`),
-  except `--infinite`, which streams forever via `lorem_core::Generator`,
-  paced by `--interval`. `--output-format txt` (default) is plain prose for
-  piping to files — seed goes to stderr; `--output-format json` is JSON
-  Lines with a meta line carrying the seed first (the seed-reporting
-  invariant applies to streams too). Broken pipes end streams quietly;
-  don't use `println!` there (it panics on EPIPE).
-- `crates/lorem-tui` — ratatui form + scrollable table. Uses
-  `ratatui::crossterm` re-export (don't add a separate crossterm dep).
+One file = one responsibility throughout. Unit tests live in a sibling
+`<module>/tests.rs` (declared `#[cfg(test)] mod tests;` — never inline);
+cross-cutting tests go in the crate's `tests/` dir.
+
+### lorem-core modules (pipeline order)
+
+- `text.rs` — pure tokenization/casing helpers.
+- `interner.rs` — word ↔ `u32` id table.
+- `chain.rs` — the order-2 Markov transition table: `next_id` (None = dead
+  end), `random_start`, `is_ender` (words that ended a corpus sentence).
+- `model.rs` — corpus text → `Interner` + `Chain` composition; the only
+  place corpus text meets the chain.
+- `walk.rs` — sentence-walk policy: walks past the target length until an
+  ender so sentences don't stop mid-phrase; dead-end splices and occasional
+  ender-word pauses become comma positions.
+- `compose.rs` — pure: ids+commas → capitalized, punctuated sentence.
+- `generator.rs` — `Generator` (one word/sentence/paragraph per
+  `next_item`) and `generate` built on it, so batch and streamed output are
+  identical for the same seed. Words mode is one continuous walk; dead ends
+  queue the second word of the spliced start pair so the walk stays on real
+  corpus transitions.
+- `types.rs` — serde types: `Mode`, `GeneratorOptions` (`count` is in units
+  of `mode`), `GeneratedText` (`items`: one entry per paragraph/sentence; a
+  single flat lowercase run in words mode).
+- `themes.rs` — `Theme` enum + `list_themes`; corpora are plain-text files
+  under `src/themes/` pulled in with `include_str!`.
+- `settings.rs` — persisted defaults (JSON in the platform config dir).
+  Front ends load these at startup; saving is via CLI `--save-defaults` or
+  TUI `s` (the GUI deliberately has no save control). Seeds are never
+  persisted.
+
+### Front ends
+
+- `crates/lorem-cli` — `args.rs` (clap surface), `resolve.rs` (flag → saved
+  default → built-in precedence), `stream.rs` (`--infinite` paced streaming:
+  txt = prose to stdout with seed on stderr; json = JSON Lines with a meta
+  line carrying the seed — the seed-reporting invariant applies to streams).
+  Broken pipes end streams quietly; don't use `println!` there (it panics
+  on EPIPE). `main.rs` is dispatch only.
+- `crates/lorem-tui` — `app.rs` (state + key handling, fully unit-tested
+  headless via `App::from_options`), `ui.rs` (rendering only), `theme.rs`
+  (palette). Uses `ratatui::crossterm` re-export (don't add a separate
+  crossterm dep).
 - `gui/src-tauri` — workspace member; three commands (`generate`, `themes`,
   `settings`) that just delegate to lorem-core. Frontend is vanilla TS +
-  Vite, no framework.
+  Vite, split as `api.ts` (invoke boundary), `form.ts` (options form),
+  `output.ts` (render/copy), `main.ts` (wiring).
 
 ### Invariants
 

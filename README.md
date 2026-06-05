@@ -147,5 +147,9 @@ All three front ends pick it up automatically.
 ## Tests
 
 ```sh
-cargo test -p lorem-core
+cargo test --workspace
 ```
+
+Each module carries its own unit tests in a sibling `<module>/tests.rs`
+file (no inline test blocks); end-to-end generation behavior lives in
+`crates/lorem-core/tests/`.

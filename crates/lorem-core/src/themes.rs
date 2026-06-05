@@ -5,6 +5,20 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
+use crate::types::ThemeInfo;
+
+/// Every theme, in display order, as front-end-friendly descriptors.
+pub fn list_themes() -> Vec<ThemeInfo> {
+    Theme::ALL
+        .iter()
+        .map(|t| ThemeInfo {
+            id: t.id().to_string(),
+            name: t.display_name().to_string(),
+            description: t.description().to_string(),
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {

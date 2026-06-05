@@ -219,3 +219,16 @@ input[type="range"] {
   color: var(--accent-light);
   font-style: italic;
 }
+
+/* Words mode is a flat lowercase word run — no indent or drop cap. */
+#output.words-mode p {
+  text-indent: 0;
+}
+
+#output.words-mode p:first-child::first-letter {
+  font-size: inherit;
+  float: none;
+  padding-right: 0;
+  color: inherit;
+  font-style: normal;
+}

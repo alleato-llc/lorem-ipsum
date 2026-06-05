@@ -19,11 +19,23 @@
           </label>
 
           <label class="field">
-            <span class="label">Paragraphs <output id="paragraphs-out">3</output></span>
-            <input type="range" id="paragraphs" min="1" max="12" value="3" />
+            <span class="label">Mode</span>
+            <select id="mode">
+              <option value="paragraphs" selected>Paragraphs</option>
+              <option value="sentences">Sentences</option>
+              <option value="words">Words</option>
+            </select>
           </label>
 
-          <div class="field-pair">
+          <label class="field">
+            <span class="label"
+              ><span id="count-label">Paragraphs</span>
+              <output id="count-out">3</output></span
+            >
+            <input type="range" id="count" min="1" max="12" value="3" />
+          </label>
+
+          <div class="field-pair" id="sentence-range">
             <label class="field">
               <span class="label">Sentences min</span>
               <input type="number" id="min-sentences" min="1" max="20" value="3" />
@@ -34,7 +46,7 @@
             </label>
           </div>
 
-          <div class="field-pair">
+          <div class="field-pair" id="word-range">
             <label class="field">
               <span class="label">Words min</span>
               <input type="number" id="min-words" min="3" max="40" value="8" />

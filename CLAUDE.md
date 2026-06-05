@@ -27,7 +27,17 @@ behavior changes in `lorem-core` so all three pick them up.
   they don't stop mid-phrase. Dead-end splices and ender-words become commas.
 - `crates/lorem-core/src/themes.rs` — `Theme` enum; corpora are plain-text
   files under `src/themes/` pulled in with `include_str!`.
-- `crates/lorem-core/src/lib.rs` — options/output types (serde), `generate`.
+- `crates/lorem-core/src/settings.rs` — persisted defaults
+  (`load_settings`/`save_settings`, JSON in the platform config dir). All
+  front ends load these at startup as their initial options; saving is via
+  CLI `--save-defaults` or TUI `s` (the GUI deliberately has no save
+  control). Seeds are never persisted (a saved seed would freeze the
+  output).
+- `crates/lorem-core/src/lib.rs` — options/output types (serde), `generate`,
+  and `Mode` (words / sentences / paragraphs). `GeneratorOptions.count` is in
+  units of `mode`; `GeneratedText.items` holds one entry per paragraph or
+  sentence (a single entry in words mode, which is a flat lowercase run with
+  no punctuation).
 - `crates/lorem-cli` — clap; JSON only (pretty by default, `--compact`).
 - `crates/lorem-tui` — ratatui form + scrollable table. Uses
   `ratatui::crossterm` re-export (don't add a separate crossterm dep).
@@ -44,6 +54,8 @@ behavior changes in `lorem-core` so all three pick them up.
   options; keep new fields defaultable.
 - min/max option pairs are clamped (`max.max(min)`) in core — front ends
   don't need to validate ordering.
+- The TUI accent colors (`ACCENT`/`ACCENT_LIGHT` in lorem-tui) mirror the
+  GUI's royal purple CSS vars — keep them in sync when retheming.
 
 ## Adding a theme
 

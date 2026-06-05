@@ -13,9 +13,14 @@ fn themes() -> Vec<ThemeInfo> {
     lorem_core::list_themes()
 }
 
+#[tauri::command]
+fn settings() -> GeneratorOptions {
+    lorem_core::load_settings()
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![generate, themes])
+        .invoke_handler(tauri::generate_handler![generate, themes, settings])
         .run(tauri::generate_context!())
         .expect("error while running lorem-gui");
 }

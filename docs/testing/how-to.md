@@ -3,6 +3,11 @@
 Quick reference. Deeper guides: [unit](unit.md) · [component](component.md)
 · [e2e](e2e.md). Strategy: [design](design.md).
 
+CI (`.github/workflows/ci.yml`) runs every layer on pushes to `main` and on
+pull requests: a Rust job (workspace build + all cargo tests, with the
+Tauri system libraries installed) and a frontend job (tsc, vite build,
+vitest, Playwright e2e).
+
 ## Run everything
 
 ```sh

@@ -22,6 +22,9 @@ cd gui && npm test                 # frontend unit + component tests (vitest)
 cd gui && npm run test:e2e         # frontend e2e (Playwright; needs npx playwright install chromium once)
 ```
 
+CI (`.github/workflows/ci.yml`) runs all of the above on push/PR; the Rust
+job installs Tauri's webkit/gtk system deps on ubuntu first.
+
 ## Architecture
 
 All front ends call `lorem_core::generate(&GeneratorOptions) -> GeneratedText`

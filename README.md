@@ -1,5 +1,7 @@
 # lorem-ipsum
 
+[![CI](https://github.com/alleato-llc/lorem-ipsum/actions/workflows/ci.yml/badge.svg)](https://github.com/alleato-llc/lorem-ipsum/actions/workflows/ci.yml)
+
 Markov-chain lorem ipsum generator with three front ends sharing one Rust
 core. Five themes (classic Latin, tech startup, pirate, corporate buzzword,
 cosmic), three generation modes (paragraphs, sentences, words), seedable

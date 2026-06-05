@@ -3,6 +3,11 @@
 Markov-chain lorem ipsum generator: one Rust core crate consumed by three
 front ends (CLI, ratatui TUI, Tauri 2 + TypeScript GUI).
 
+Human-facing documentation lives under `docs/` (per-component architecture
++ testing guides), with README.md as the overview/index. When behavior
+changes, update the matching doc — this file stays the concise agent-facing
+summary.
+
 ## Commands
 
 ```sh
@@ -13,6 +18,8 @@ cargo run -p lorem-tui             # TUI (interactive — don't run headless)
 cd gui && npm run tauri dev        # GUI dev (needs npm install once)
 cd gui && npx tsc --noEmit         # type-check frontend
 cd gui && npx vite build           # build frontend to gui/dist
+cd gui && npm test                 # frontend unit + component tests (vitest)
+cd gui && npm run test:e2e         # frontend e2e (Playwright; needs npx playwright install chromium once)
 ```
 
 ## Architecture
@@ -66,8 +73,26 @@ cross-cutting tests go in the crate's `tests/` dir.
   crossterm dep).
 - `gui/src-tauri` — workspace member; three commands (`generate`, `themes`,
   `settings`) that just delegate to lorem-core. Frontend is vanilla TS +
-  Vite, split as `api.ts` (invoke boundary), `form.ts` (options form),
-  `output.ts` (render/copy), `main.ts` (wiring).
+  Vite: `types.ts` (backend data types), `backend.ts` (interface + runtime
+  selection: real Tauri invoke vs `backend/mock.ts`, a deterministic
+  in-browser fake used outside Tauri), `options.ts` (pure form logic),
+  `dom.ts` (lookup helper), `form.ts`/`output.ts` (DOM glue), `main.ts`
+  (wiring).
+
+### Frontend tests
+
+- `gui/tests/unit/` — vitest, pure logic (`options.ts`, mock backend).
+- `gui/tests/component/` — vitest + happy-dom against the real index.html
+  markup (loaded by `tests/helpers/fixture.ts`).
+- `gui/e2e/` — Playwright against `vite` on port 1421 in a real Chromium;
+  the mock backend activates automatically (no `__TAURI_INTERNALS__`).
+  tauri-driver has no macOS support, so the native shell itself can't be
+  e2e-driven here — the mock seam is the boundary.
+- Element lookups go through `dom.ts`'s `byId` fresh on every call (no
+  module-level element caching) so component tests can rebuild the DOM.
+- Gotcha found by e2e: author `display` rules override the UA's `[hidden]`
+  style — styles.css keeps a `[hidden] { display: none !important; }`
+  guard. Don't remove it.
 
 ### Invariants
 

@@ -148,53 +148,119 @@ pub fn list_themes() -> Vec<ThemeInfo> {
         .collect()
 }
 
+/// Incremental generator: each `next_item` call yields one unit of `mode` —
+/// a single word, sentence, or paragraph. Words mode is one continuous chain
+/// walk, so consecutive words connect like running text. Used by `generate`
+/// and by streaming front ends.
+pub struct Generator {
+    chain: Chain,
+    rng: StdRng,
+    opts: GeneratorOptions,
+    seed: u64,
+    /// Last two emitted word ids (words mode walk state).
+    walk: Option<(u32, u32)>,
+    /// Second word of a freshly spliced start pair, emitted next.
+    queued: Option<u32>,
+    opener_done: bool,
+    sentences_generated: usize,
+}
+
+impl Generator {
+    pub fn new(opts: &GeneratorOptions) -> Self {
+        // Keep auto-drawn seeds within f64-safe integer range so they
+        // survive a round trip through JSON.
+        let seed = opts.seed.unwrap_or_else(|| rand::rng().random::<u32>() as u64);
+        Generator {
+            chain: Chain::from_corpus(opts.theme.corpus()),
+            rng: StdRng::seed_from_u64(seed),
+            opts: opts.clone(),
+            seed,
+            walk: None,
+            queued: None,
+            opener_done: false,
+            sentences_generated: 0,
+        }
+    }
+
+    /// The seed in use; feed it back in to reproduce the stream.
+    pub fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    fn classic_opener(&self) -> bool {
+        self.opts.start_with_lorem && self.opts.theme == Theme::Classic
+    }
+
+    fn next_word(&mut self) -> String {
+        let id = match (self.walk, self.queued.take()) {
+            (Some(_), Some(queued)) => queued,
+            (Some(pair), None) => match self.chain.next_id(&mut self.rng, pair) {
+                Some(id) => id,
+                None => {
+                    // Dead end: splice in a fresh start pair so the walk
+                    // resumes on a real corpus transition.
+                    let (x, y) = self.chain.random_start(&mut self.rng);
+                    self.queued = Some(y);
+                    x
+                }
+            },
+            (None, _) => {
+                // First word: classic + opener starts at "lorem ipsum".
+                let start = self
+                    .classic_opener()
+                    .then(|| self.chain.find_start("lorem", "ipsum"))
+                    .flatten()
+                    .unwrap_or_else(|| self.chain.random_start(&mut self.rng));
+                self.queued = Some(start.1);
+                start.0
+            }
+        };
+        self.walk = Some(match self.walk {
+            Some((_, prev)) => (prev, id),
+            None => (id, id), // placeholder until the queued word lands
+        });
+        self.chain.word_str(id).to_string()
+    }
+
+    fn next_sentence(&mut self) -> String {
+        self.sentences_generated += 1;
+        if !self.opener_done && self.classic_opener() {
+            self.opener_done = true;
+            return LOREM_OPENER.to_string();
+        }
+        self.opener_done = true;
+        self.chain
+            .sentence(&mut self.rng, self.opts.min_words, self.opts.max_words)
+    }
+
+    /// Yield the next word, sentence, or paragraph depending on `mode`.
+    pub fn next_item(&mut self) -> String {
+        match self.opts.mode {
+            Mode::Words => self.next_word(),
+            Mode::Sentences => self.next_sentence(),
+            Mode::Paragraphs => {
+                let min = self.opts.min_sentences.max(1);
+                let max = self.opts.max_sentences.max(min);
+                let n = self.rng.random_range(min..=max);
+                let sentences: Vec<String> = (0..n).map(|_| self.next_sentence()).collect();
+                sentences.join(" ")
+            }
+        }
+    }
+}
+
 pub fn generate(opts: &GeneratorOptions) -> GeneratedText {
-    // Keep auto-drawn seeds within f64-safe integer range so they survive a
-    // round trip through JSON.
-    let seed = opts.seed.unwrap_or_else(|| rand::rng().random::<u32>() as u64);
-    let mut rng = StdRng::seed_from_u64(seed);
-    let chain = Chain::from_corpus(opts.theme.corpus());
-
+    let mut generator = Generator::new(opts);
     let count = opts.count.max(1);
-    let classic_opener = opts.start_with_lorem && opts.theme == Theme::Classic;
-    let max_sentences = opts.max_sentences.max(opts.min_sentences).max(1);
-    let min_sentences = opts.min_sentences.max(1);
 
-    let (items, sentence_count) = match opts.mode {
+    let items = match opts.mode {
+        // A single flat run of `count` words.
         Mode::Words => {
-            let start = classic_opener
-                .then(|| chain.find_start("lorem", "ipsum"))
-                .flatten();
-            (vec![chain.words(&mut rng, count, start)], 0)
+            let words: Vec<String> = (0..count).map(|_| generator.next_item()).collect();
+            vec![words.join(" ")]
         }
-        Mode::Sentences => {
-            let mut items = Vec::with_capacity(count);
-            for i in 0..count {
-                if i == 0 && classic_opener {
-                    items.push(LOREM_OPENER.to_string());
-                } else {
-                    items.push(chain.sentence(&mut rng, opts.min_words, opts.max_words));
-                }
-            }
-            (items, count)
-        }
-        Mode::Paragraphs => {
-            let mut items = Vec::with_capacity(count);
-            let mut total = 0usize;
-            for p in 0..count {
-                let n = rng.random_range(min_sentences..=max_sentences);
-                let mut sentences = Vec::with_capacity(n);
-                for s in 0..n {
-                    if p == 0 && s == 0 && classic_opener {
-                        sentences.push(LOREM_OPENER.to_string());
-                    } else {
-                        sentences.push(chain.sentence(&mut rng, opts.min_words, opts.max_words));
-                    }
-                }
-                total += sentences.len();
-                items.push(sentences.join(" "));
-            }
-            (items, total)
+        Mode::Sentences | Mode::Paragraphs => {
+            (0..count).map(|_| generator.next_item()).collect()
         }
     };
 
@@ -206,8 +272,8 @@ pub fn generate(opts: &GeneratorOptions) -> GeneratedText {
         mode: opts.mode,
         items,
         word_count,
-        sentence_count,
-        seed,
+        sentence_count: generator.sentences_generated,
+        seed: generator.seed,
     }
 }
 
@@ -302,6 +368,42 @@ mod tests {
         };
         let out = generate(&opts);
         assert!(out.items[0].starts_with("lorem ipsum"));
+    }
+
+    #[test]
+    fn generator_streams_single_words() {
+        let opts = GeneratorOptions {
+            mode: Mode::Words,
+            seed: Some(21),
+            ..Default::default()
+        };
+        let mut generator = Generator::new(&opts);
+        assert_eq!(generator.next_item(), "lorem");
+        assert_eq!(generator.next_item(), "ipsum");
+        for _ in 0..100 {
+            let word = generator.next_item();
+            assert!(!word.is_empty());
+            assert!(
+                !word.contains(char::is_whitespace),
+                "stream item should be a single word: {word:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn generator_stream_matches_generate() {
+        let opts = GeneratorOptions {
+            theme: Theme::Pirate,
+            mode: Mode::Sentences,
+            count: 4,
+            seed: Some(33),
+            start_with_lorem: false,
+            ..Default::default()
+        };
+        let batch = generate(&opts);
+        let mut generator = Generator::new(&opts);
+        let streamed: Vec<String> = (0..4).map(|_| generator.next_item()).collect();
+        assert_eq!(batch.items, streamed);
     }
 
     #[test]

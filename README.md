@@ -5,8 +5,8 @@ Markov-chain lorem ipsum generator with three front ends sharing one core:
 | Crate / dir         | What it is                                              |
 | ------------------- | ------------------------------------------------------- |
 | `crates/lorem-core` | Order-2 Markov chain engine + themed corpora            |
-| `crates/lorem-cli`  | `lorem` CLI — JSON output                               |
-| `crates/lorem-tui`  | `lorem-tui` — ratatui form + scrollable paragraph table |
+| `crates/lorem-cli`  | `lorem` CLI — JSON output + infinite streaming          |
+| `crates/lorem-tui`  | `lorem-tui` — ratatui form + scrollable output table    |
 | `gui/`              | Lorem Ipsum Studio — Tauri 2 + TypeScript desktop app   |
 
 ## Themes
@@ -45,7 +45,8 @@ lorem --help
 
 Options: `--theme`, `--mode`, `-n`/`--count`,
 `--min-sentences`/`--max-sentences`, `--min-words`/`--max-words`, `--seed`,
-`--lorem-start`/`--no-lorem-start`, `--save-defaults`, `--compact`.
+`--lorem-start`/`--no-lorem-start`, `--save-defaults`, `--compact`,
+`--infinite`, `--output-format <txt|json>`, `--interval <ms>`.
 
 Output is JSON (pretty by default, `--compact` for one line):
 
@@ -61,6 +62,33 @@ Output is JSON (pretty by default, `--compact` for one line):
 }
 ```
 
+### Streaming
+
+`--infinite` streams forever (ignores `-n`), one word/sentence/paragraph at
+a time per `--mode`, paced by `--interval <ms>` (defaults: 100 words / 400
+sentences / 900 paragraphs). Words stream as one continuous chain walk, so
+they read as running text. Stops cleanly when the reader hangs up (Ctrl-C,
+or a closed pipe).
+
+`--output-format` picks the flavor:
+
+- `txt` (default) — pure prose on stdout, ready to pipe to a file. Words
+  wrap at ~72 columns, sentences land one per line, paragraphs are separated
+  by blank lines. The seed is reported on stderr so stdout stays clean.
+- `json` — JSON Lines: a meta line carrying the seed first, then one object
+  per item.
+
+```sh
+lorem --infinite --theme classic --mode sentences > lorem.txt   # Ctrl-C when done
+lorem --infinite --theme cosmic --mode words | head -50
+lorem --infinite --output-format json --mode sentences --interval 250
+```
+
+```json
+{"mode":"sentences","seed":7,"theme":"pirate"}
+{"index":0,"text":"The salty crew hoisted the black flag and sailed for the far horizon."}
+```
+
 ## TUI
 
 ```sh
@@ -68,8 +96,9 @@ cargo run -p lorem-tui
 ```
 
 `Tab` switches between the options form and the output table. In the form:
-`↑↓` select a field, `←→` adjust it (type digits into Seed). `Enter` or `g`
-generates; `q` quits.
+`↑↓` select a field, `←→` adjust it (type digits into Seed; fields that
+don't apply to the current mode are dimmed). `Enter` or `g` generates,
+`s` saves the current options as defaults, `q` quits.
 
 ## GUI (Tauri)
 

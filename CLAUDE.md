@@ -37,13 +37,23 @@ behavior changes in `lorem-core` so all three pick them up.
   and `Mode` (words / sentences / paragraphs). `GeneratorOptions.count` is in
   units of `mode`; `GeneratedText.items` holds one entry per paragraph or
   sentence (a single entry in words mode, which is a flat lowercase run with
-  no punctuation).
-- `crates/lorem-cli` — clap; JSON only (pretty by default, `--compact`).
+  no punctuation). `Generator` is the incremental form (one word/sentence/
+  paragraph per `next_item` call) — `generate` is built on it, so batch and
+  streamed output are identical for the same seed. Words mode is one
+  continuous walk; dead ends queue the second word of the spliced start pair
+  so the walk stays on real corpus transitions.
+- `crates/lorem-cli` — clap; JSON output (pretty by default, `--compact`),
+  except `--infinite`, which streams forever via `lorem_core::Generator`,
+  paced by `--interval`. `--output-format txt` (default) is plain prose for
+  piping to files — seed goes to stderr; `--output-format json` is JSON
+  Lines with a meta line carrying the seed first (the seed-reporting
+  invariant applies to streams too). Broken pipes end streams quietly;
+  don't use `println!` there (it panics on EPIPE).
 - `crates/lorem-tui` — ratatui form + scrollable table. Uses
   `ratatui::crossterm` re-export (don't add a separate crossterm dep).
-- `gui/src-tauri` — workspace member; two commands (`generate`, `themes`)
-  that just delegate to lorem-core. Frontend is vanilla TS + Vite, no
-  framework.
+- `gui/src-tauri` — workspace member; three commands (`generate`, `themes`,
+  `settings`) that just delegate to lorem-core. Frontend is vanilla TS +
+  Vite, no framework.
 
 ### Invariants
 

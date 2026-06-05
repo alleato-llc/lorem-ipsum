@@ -77,8 +77,20 @@ impl Chain {
         }
     }
 
-    fn random_start(&self, rng: &mut StdRng) -> (u32, u32) {
+    pub(crate) fn random_start(&self, rng: &mut StdRng) -> (u32, u32) {
         self.starts[rng.random_range(0..self.starts.len())]
+    }
+
+    /// One step of the walk; `None` means `pair` is a dead end and the
+    /// caller should splice in a fresh start.
+    pub(crate) fn next_id(&self, rng: &mut StdRng, pair: (u32, u32)) -> Option<u32> {
+        self.transitions
+            .get(&pair)
+            .map(|nexts| nexts[rng.random_range(0..nexts.len())])
+    }
+
+    pub(crate) fn word_str(&self, id: u32) -> &str {
+        &self.words[id as usize]
     }
 
     /// Locate a specific start pair by its words (used to begin classic
@@ -88,30 +100,6 @@ impl Chain {
             .iter()
             .copied()
             .find(|&(a, b)| self.words[a as usize] == first && self.words[b as usize] == second)
-    }
-
-    /// Generate a flat run of exactly `count` words — no capitalization or
-    /// punctuation, just the raw chain walk.
-    pub fn words(&self, rng: &mut StdRng, count: usize, start: Option<(u32, u32)>) -> String {
-        let count = count.max(1);
-        let (a, b) = start.unwrap_or_else(|| self.random_start(rng));
-        let mut ids = vec![a, b];
-        while ids.len() < count {
-            let key = (ids[ids.len() - 2], ids[ids.len() - 1]);
-            match self.transitions.get(&key) {
-                Some(nexts) => ids.push(nexts[rng.random_range(0..nexts.len())]),
-                None => {
-                    let (x, y) = self.random_start(rng);
-                    ids.push(x);
-                    ids.push(y);
-                }
-            }
-        }
-        ids.truncate(count);
-        ids.iter()
-            .map(|&id| self.words[id as usize].as_str())
-            .collect::<Vec<_>>()
-            .join(" ")
     }
 
     /// Generate one sentence of roughly `min_words..=max_words` words.

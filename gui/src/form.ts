@@ -1,90 +1,71 @@
-// The options form: reading it, populating it from saved settings, and
-// keeping its fields consistent with the selected theme/mode.
+// The options form: DOM glue only. Option-building rules live in
+// `options.ts`; this module reads/writes form elements and keeps fields
+// consistent with the selected theme/mode.
 
-import type { GeneratorOptions, Mode, ThemeInfo } from "./api";
-
-/** Per-mode count slider bounds and label. */
-const MODE_CONFIG: Record<Mode, { label: string; min: number; max: number; initial: number }> = {
-  paragraphs: { label: "Paragraphs", min: 1, max: 12, initial: 3 },
-  sentences: { label: "Sentences", min: 1, max: 30, initial: 5 },
-  words: { label: "Words", min: 5, max: 200, initial: 50 },
-};
-
-const $ = <T extends HTMLElement>(id: string): T =>
-  document.getElementById(id) as T;
-
-const themeSelect = $<HTMLSelectElement>("theme");
-const themeDescription = $<HTMLElement>("theme-description");
-const modeSelect = $<HTMLSelectElement>("mode");
-const countInput = $<HTMLInputElement>("count");
-const countLabel = $<HTMLElement>("count-label");
-const countOut = $<HTMLOutputElement>("count-out");
-const sentenceRange = $<HTMLElement>("sentence-range");
-const wordRange = $<HTMLElement>("word-range");
-const minSentences = $<HTMLInputElement>("min-sentences");
-const maxSentences = $<HTMLInputElement>("max-sentences");
-const minWords = $<HTMLInputElement>("min-words");
-const maxWords = $<HTMLInputElement>("max-words");
-const seedInput = $<HTMLInputElement>("seed");
-const startWithLorem = $<HTMLInputElement>("start-with-lorem");
-const form = $<HTMLFormElement>("options-form");
+import { byId } from "./dom";
+import { buildOptions, clampCount, MODE_CONFIG } from "./options";
+import type { GeneratorOptions, Mode, ThemeInfo } from "./types";
 
 let themes: ThemeInfo[] = [];
 
 function currentMode(): Mode {
-  return modeSelect.value as Mode;
+  return byId<HTMLSelectElement>("mode").value as Mode;
 }
 
 /** The form's current state as backend options. */
 export function currentOptions(): GeneratorOptions {
-  const seed = seedInput.value.trim();
-  return {
-    theme: themeSelect.value,
+  return buildOptions({
+    theme: byId<HTMLSelectElement>("theme").value,
     mode: currentMode(),
-    count: Number(countInput.value),
-    min_sentences: Number(minSentences.value),
-    max_sentences: Math.max(Number(maxSentences.value), Number(minSentences.value)),
-    min_words: Number(minWords.value),
-    max_words: Math.max(Number(maxWords.value), Number(minWords.value)),
-    seed: /^\d+$/.test(seed) ? Number(seed) : null,
-    start_with_lorem: startWithLorem.checked,
-  };
+    count: byId<HTMLInputElement>("count").value,
+    minSentences: byId<HTMLInputElement>("min-sentences").value,
+    maxSentences: byId<HTMLInputElement>("max-sentences").value,
+    minWords: byId<HTMLInputElement>("min-words").value,
+    maxWords: byId<HTMLInputElement>("max-words").value,
+    seed: byId<HTMLInputElement>("seed").value,
+    startWithLorem: byId<HTMLInputElement>("start-with-lorem").checked,
+  });
 }
 
 function updateThemeDescription(): void {
-  const theme = themes.find((t) => t.id === themeSelect.value);
-  themeDescription.textContent = theme?.description ?? "";
+  const theme = themes.find((t) => t.id === byId<HTMLSelectElement>("theme").value);
+  byId("theme-description").textContent = theme?.description ?? "";
   // "Start with Lorem ipsum…" only applies to the classic theme.
-  startWithLorem.disabled = themeSelect.value !== "classic";
+  byId<HTMLInputElement>("start-with-lorem").disabled =
+    byId<HTMLSelectElement>("theme").value !== "classic";
+}
+
+function setCount(value: number): void {
+  const count = byId<HTMLInputElement>("count");
+  count.value = String(value);
+  byId<HTMLOutputElement>("count-out").value = count.value;
 }
 
 /** Retune the count slider and hide irrelevant range fields for the mode. */
 function updateModeFields(): void {
-  const config = MODE_CONFIG[currentMode()];
-  countLabel.textContent = config.label;
-  countInput.min = String(config.min);
-  countInput.max = String(config.max);
-  countInput.value = String(config.initial);
-  countOut.value = countInput.value;
-  sentenceRange.hidden = currentMode() !== "paragraphs";
-  wordRange.hidden = currentMode() === "words";
+  const mode = currentMode();
+  const config = MODE_CONFIG[mode];
+  const count = byId<HTMLInputElement>("count");
+  byId("count-label").textContent = config.label;
+  count.min = String(config.min);
+  count.max = String(config.max);
+  setCount(config.initial);
+  byId("sentence-range").hidden = mode !== "paragraphs";
+  byId("word-range").hidden = mode === "words";
 }
 
 /** Populate the form from saved defaults. */
 function applySettings(saved: GeneratorOptions): void {
-  themeSelect.value = saved.theme;
-  modeSelect.value = saved.mode;
+  byId<HTMLSelectElement>("theme").value = saved.theme;
+  byId<HTMLSelectElement>("mode").value = saved.mode;
   updateThemeDescription();
   updateModeFields(); // sets slider bounds for the mode, then override count:
-  countInput.value = String(
-    Math.min(Number(countInput.max), Math.max(Number(countInput.min), saved.count)),
-  );
-  countOut.value = countInput.value;
-  minSentences.value = String(saved.min_sentences);
-  maxSentences.value = String(saved.max_sentences);
-  minWords.value = String(saved.min_words);
-  maxWords.value = String(saved.max_words);
-  startWithLorem.checked = saved.start_with_lorem;
+  setCount(clampCount(saved.count, saved.mode));
+  byId<HTMLInputElement>("min-sentences").value = String(saved.min_sentences);
+  byId<HTMLInputElement>("max-sentences").value = String(saved.max_sentences);
+  byId<HTMLInputElement>("min-words").value = String(saved.min_words);
+  byId<HTMLInputElement>("max-words").value = String(saved.max_words);
+  byId<HTMLInputElement>("start-with-lorem").checked = saved.start_with_lorem;
 }
 
 /** Wire the form up: theme list, saved defaults, and the generate action. */
@@ -94,7 +75,7 @@ export function initForm(
   onGenerate: () => void,
 ): void {
   themes = themeList;
-  themeSelect.replaceChildren(
+  byId<HTMLSelectElement>("theme").replaceChildren(
     ...themes.map((t) => {
       const option = document.createElement("option");
       option.value = t.id;
@@ -104,12 +85,12 @@ export function initForm(
   );
   applySettings(saved);
 
-  themeSelect.addEventListener("change", updateThemeDescription);
-  modeSelect.addEventListener("change", updateModeFields);
-  countInput.addEventListener("input", () => {
-    countOut.value = countInput.value;
+  byId("theme").addEventListener("change", updateThemeDescription);
+  byId("mode").addEventListener("change", updateModeFields);
+  byId("count").addEventListener("input", () => {
+    byId<HTMLOutputElement>("count-out").value = byId<HTMLInputElement>("count").value;
   });
-  form.addEventListener("submit", (e) => {
+  byId<HTMLFormElement>("options-form").addEventListener("submit", (e) => {
     e.preventDefault();
     onGenerate();
   });

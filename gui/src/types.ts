@@ -1,6 +1,4 @@
-// The Tauri boundary: backend types and invoke wrappers, nothing else.
-
-import { invoke } from "@tauri-apps/api/core";
+// Backend data types, mirroring lorem-core's serde types.
 
 export interface ThemeInfo {
   id: string;
@@ -31,11 +29,3 @@ export interface GeneratorOptions {
   seed: number | null;
   start_with_lorem: boolean;
 }
-
-export const fetchThemes = (): Promise<ThemeInfo[]> => invoke<ThemeInfo[]>("themes");
-
-export const fetchSettings = (): Promise<GeneratorOptions> =>
-  invoke<GeneratorOptions>("settings");
-
-export const requestGeneration = (options: GeneratorOptions): Promise<GeneratedText> =>
-  invoke<GeneratedText>("generate", { options });

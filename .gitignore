@@ -1,6 +1,8 @@
 /target
 node_modules/
 .claude/settings.local.json
+gui/test-results/
+gui/playwright-report/
 gui/dist/
 gui/src-tauri/gen/
 .DS_Store

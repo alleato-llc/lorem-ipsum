@@ -46,6 +46,7 @@ output exactly.
 | [docs/gui/architecture.md](docs/gui/architecture.md) | Tauri backend, frontend modules, the mock-backend seam, styling gotchas |
 | [docs/testing/design.md](docs/testing/design.md) | test strategy, layers, seams, known limits |
 | [docs/testing/how-to.md](docs/testing/how-to.md) | commands quick reference ([unit](docs/testing/unit.md) · [component](docs/testing/component.md) · [e2e](docs/testing/e2e.md)) |
+| [docs/cicd.md](docs/cicd.md) | the CI pipeline: jobs, caching, timings, release notes |
 
 ## License
 

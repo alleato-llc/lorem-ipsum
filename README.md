@@ -48,6 +48,11 @@ output exactly.
 | [docs/testing/how-to.md](docs/testing/how-to.md) | commands quick reference ([unit](docs/testing/unit.md) · [component](docs/testing/component.md) · [e2e](docs/testing/e2e.md)) |
 | [docs/cicd.md](docs/cicd.md) | the CI pipeline: jobs, caching, timings, release notes |
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) — setup, ground rules, and the
+pre-PR checklist.
+
 ## License
 
 MIT © Alleato LLC — see [LICENSE](LICENSE).
